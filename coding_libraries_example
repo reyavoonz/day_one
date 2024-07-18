@@ -1,0 +1,51 @@
+# libraries imported
+import networkx as nx
+import matplotlib.pyplot as plt
+import random
+
+# creating a social media friend network
+def generate_social_media_network(num_users, num_connections):
+    G = nx.Graph()
+    
+    # random user names
+    users = [f"User_{i}" for i in range(num_users)]
+    
+    # users are the nodes
+    G.add_nodes_from(users)
+    
+    # random connections b/w users
+    for _ in range(num_connections):
+        user1, user2 = random.sample(users, 2)
+        G.add_edge(user1, user2)
+    
+    return G
+
+# visualize social media network
+def visualize_social_media_network(G):
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=500, font_size=10)
+    plt.title('Social Media Friend Network')
+    plt.show()
+
+# compute degree centrality to determine importance of user in network
+def compute_degree_centrality(G):
+    degree_centrality = nx.degree_centrality(G)
+    return degree_centrality
+
+def main():
+    # final creation of friend network
+    num_users = 10
+    num_connections = 15
+    G = generate_social_media_network(num_users, num_connections)
+
+    # visualize network
+    visualize_social_media_network(G)
+
+    # calculate & print degree centrality
+    centrality = compute_degree_centrality(G)
+    print("Degree Centrality:")
+    for user, centrality_value in centrality.items():
+        print(f"{user}: {centrality_value:.3f}")
+
+if __name__ == "__main__":
+    main()
