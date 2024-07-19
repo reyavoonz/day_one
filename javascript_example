@@ -1,0 +1,77 @@
+//import tensorflow.js and natural 
+const tf = require('@tensorflow/tfjs-node');
+const natural = require('natural');
+
+//dataset of the features and labels
+const data = [
+    { sentence: "Alvie is great!", label: 1 },
+    { sentence: "This app didn't help me!", label: 0 },
+    { sentence: "Alvie changed my life. I love it!", label: 1 },
+    { sentence: "The app could be better, I'm gonna use Headspace instead.", label: 0 }
+];
+
+//tokenizing sentences and convert to numerical data like before
+const tokenizer = new natural.WordTokenizer();
+const maxWords = 100;
+const maxLen = 10;
+//with dictionary mapping so each unique word is added to an integer index- machine learning process
+const sequences = data.map(item => tokenizer.tokenize(item.sentence));
+const wordIndex = {};
+let index = 1;
+sequences.forEach(seq => {
+    seq.forEach(word => {
+        if (!wordIndex[word]) {
+            wordIndex[word] = index++;
+        }
+    });
+});
+//padding seqs with zeroes to ensure theyre of the same length, consistent dimensions
+const paddedSequences = sequences.map(seq => {
+    const tokenizedSeq = seq.map(word => wordIndex[word] || 0);
+    while (tokenizedSeq.length < maxLen) {
+        tokenizedSeq.push(0);
+    }
+    return tokenizedSeq.slice(0, maxLen);
+});
+const labels = data.map(item => item.label);
+
+//converting data --> tensors
+const inputTensor = tf.tensor2d(paddedSequences, [paddedSequences.length, maxLen]);
+const labelTensor = tf.tensor2d(labels, [labels.length, 1]);
+
+//neural network model for this code
+const model = tf.sequential();
+model.add(tf.layers.embedding({ inputDim: maxWords, outputDim: 16, inputLength: maxLen }));
+model.add(tf.layers.lstm({ units: 32 }));
+model.add(tf.layers.dense({ units: 16, activation: 'relu' }));
+model.add(tf.layers.dropout({ rate: 0.5 }));
+model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
+
+//compiling model with specific loss function + optimizer
+model.compile({ loss: 'binaryCrossentropy', optimizer: 'adam', metrics: ['accuracy'] });
+
+//training model
+async function trainModel() {
+    await model.fit(inputTensor, labelTensor, { epochs: 10 });
+    console.log('Model training complete');
+
+//testing model with new post from user
+    const newPost = "I really loved using Alvie! My fav app on the market!";
+    const prediction = predictSentiment(newPost);
+    console.log(`Predicted Sentiment for the new post '${newPost}': ${prediction}`);
+}
+
+//predicting sentiment for new post with numerical value
+function predictSentiment(post) {
+    const sequence = tokenizer.tokenize(post).map(word => wordIndex[word] || 0);
+    while (sequence.length < maxLen) {
+        sequence.push(0);
+    }
+    const paddedSequence = sequence.slice(0, maxLen);
+    const input = tf.tensor2d([paddedSequence], [1, maxLen]);
+    const prediction = model.predict(input);
+    return prediction.dataSync()[0];
+}
+
+//training the model
+trainModel();
