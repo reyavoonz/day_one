@@ -1,0 +1,93 @@
+#importing libraries like random and deap for randon number generation and testing evolutionary algorithms
+import random
+from deap import base, creator, tools, algorithms
+
+#define types of therapies and activities
+therapies = ['CBT', 'Group', 'Individual']
+activities = ['Meditation', 'Exercise', 'Journaling']
+
+#to evaluate the fitness of a treatment plan
+def evaluate(individual):
+    score = 0
+    for item in individual:
+        if item == 'CBT':
+            score += 10
+        elif item == 'Group':
+            score += 7
+        elif item == 'Individual':
+            score += 8
+        elif item == 'Meditation':
+            score += 5
+        elif item == 'Exercise':
+            score += 6
+        elif item == 'Journaling':
+            score += 4
+    return score,
+
+#setting up individual and population classes with fitness levels or scores
+creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+creator.create("Individual", list, fitness=creator.FitnessMax)
+
+#initializing toolbox with fucntions to create inviduals and populations
+toolbox = base.Toolbox()
+toolbox.register("attr_item", random.choice, therapies + activities)
+toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_item, n=5)
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+#registering genetic algorithm operators
+toolbox.register("evaluate", evaluate)
+toolbox.register("mate", tools.cxTwoPoint)
+toolbox.register("mutate", tools.mutShuffleIndexes, indpb=0.2)
+toolbox.register("select", tools.selTournament, tournsize=3)
+
+#parameters defined
+population_size = 100
+num_generations = 50
+crossover_probability = 0.5
+mutation_probability = 0.2
+
+def main():
+    population = toolbox.population(n=population_size)
+    
+#running genetic algorithm
+    for gen in range(num_generations):
+        offspring = toolbox.select(population, len(population))
+        offspring = list(map(toolbox.clone, offspring))
+        
+#applying crossover and mutation
+        for child1, child2 in zip(offspring[::2], offspring[1::2]):
+            if random.random() < crossover_probability:
+                toolbox.mate(child1, child2)
+                del child1.fitness.values
+                del child2.fitness.values
+
+        for mutant in offspring:
+            if random.random() < mutation_probability:
+                toolbox.mutate(mutant)
+                del mutant.fitness.values
+        
+#evaluating individuals with an invalid fitness
+        invalid_individuals = [ind for ind in offspring if not ind.fitness.valid]
+        fitnesses = map(toolbox.evaluate, invalid_individuals)
+        for ind, fit in zip(invalid_individuals, fitnesses):
+            ind.fitness.values = fit
+
+#replacing population with the new generation
+        population[:] = offspring
+
+#gathering all the fitnesses in one list and then printing the stats/results
+        fits = [ind.fitness.values[0] for ind in population]
+
+        length = len(population)
+        mean = sum(fits) / length
+        sum2 = sum(x*x for x in fits)
+        std = abs(sum2 / length - mean**2)**0.5
+
+        print(f"Generation {gen}: Max {max(fits)}, Avg {mean}, Std {std}")
+
+    best_individual = tools.selBest(population, 1)[0]
+    print("Best Individual:", best_individual)
+    print("Best Fitness:", best_individual.fitness.values[0])
+
+if __name__ == "__main__":
+    main()
