@@ -1,0 +1,95 @@
+#import numpy lib and convert labels to one-hot enconded format and also split dataset into training and testing subsets
+import numpy as np
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
+
+#sample data and labels for features : sleep hours, exercice duration, and social interaction
+data = np.array([
+    [7, 30, 50],  
+    [6, 20, 30],
+    [8, 40, 60],
+    [5, 10, 20],
+    [6, 25, 45]
+])
+
+#assigning numerical values to labels (0: negative, 1: neutral, 2: positive)
+labels = np.array([2, 1, 2, 0, 1]).reshape(-1, 1)  
+
+#one-hot encoder for the labels
+encoder = OneHotEncoder(sparse=False)
+labels = encoder.fit_transform(labels)
+
+#spliting data into training & testing subsets
+X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.2, random_state=42)
+
+#using activation function
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def sigmoid_derivative(x):
+    return x * (1 - x)
+
+#defining neural network parameters
+input_neurons = X_train.shape[1]
+hidden_neurons = 5
+output_neurons = y_train.shape[1]
+
+#initializing weights and biases
+np.random.seed(42)
+weights_input_hidden = np.random.uniform(size=(input_neurons, hidden_neurons))
+weights_hidden_output = np.random.uniform(size=(hidden_neurons, output_neurons))
+bias_hidden = np.random.uniform(size=(1, hidden_neurons))
+bias_output = np.random.uniform(size=(1, output_neurons))
+
+#training the defined parameters
+learning_rate = 0.1
+epochs = 5000
+
+#training the network
+for epoch in range(epochs):
+    
+#forward pass
+    hidden_layer_input = np.dot(X_train, weights_input_hidden) + bias_hidden
+    hidden_layer_output = sigmoid(hidden_layer_input)
+    output_layer_input = np.dot(hidden_layer_output, weights_hidden_output) + bias_output
+    predicted_output = sigmoid(output_layer_input)
+
+#backward pass
+    error = y_train - predicted_output
+    d_predicted_output = error * sigmoid_derivative(predicted_output)
+    
+    error_hidden_layer = d_predicted_output.dot(weights_hidden_output.T)
+    d_hidden_layer = error_hidden_layer * sigmoid_derivative(hidden_layer_output)
+
+#updating weights and biases
+    weights_hidden_output += hidden_layer_output.T.dot(d_predicted_output) * learning_rate
+    bias_output += np.sum(d_predicted_output, axis=0, keepdims=True) * learning_rate
+    weights_input_hidden += X_train.T.dot(d_hidden_layer) * learning_rate
+    bias_hidden += np.sum(d_hidden_layer, axis=0, keepdims=True) * learning_rate
+
+print("Training complete.")
+
+#predicting mood based on user input based on the defined parameters
+def predict_mood(sleep, exercise, social):
+    user_data = np.array([[sleep, exercise, social]])
+    
+#forward-pass for prediction
+    hidden_layer_input = np.dot(user_data, weights_input_hidden) + bias_hidden
+    hidden_layer_output = sigmoid(hidden_layer_input)
+    output_layer_input = np.dot(hidden_layer_output, weights_hidden_output) + bias_output
+    predicted_output = sigmoid(output_layer_input)
+    
+#determine user mood
+    mood = np.argmax(predicted_output, axis=1)[0]
+    mood_map = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
+    return mood_map[mood]
+
+#command-line interface for predictions
+if __name__ == "__main__":
+    print("Enter the following details to predict mood:")
+    sleep_hours = float(input("Hours of Sleep: "))
+    exercise_duration = float(input("Exercise Duration: "))
+    social_interaction = float(input("Social Interaction Score: "))
+
+    mood = predict_mood(sleep_hours, exercise_duration, social_interaction)
+    print(f"Predicted Mood: {mood}")
