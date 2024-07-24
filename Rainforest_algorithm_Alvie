@@ -1,0 +1,74 @@
+#import libs like numpy, pandas, and import machine learning models, split dataset into testing & training sets, and calc accuracy of model
+import numpy as np
+import pandas as pd
+from collections import defaultdict
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+#simulate user data generation with a random number generator
+np.random.seed(42)
+data = pd.DataFrame({
+    'user_id': np.arange(1, 1001),
+    'input_text': np.random.choice(['happy', 'sad', 'neutral', 'excited', 'angry'], size=1000),
+    'feature1': np.random.choice(['A', 'B'], size=1000),
+    'feature2': np.random.randn(1000),
+    'mood': np.random.choice(['happy', 'sad', 'neutral'], size=1000)
+})
+
+#encode categorical features into numerical values
+data['input_text'] = data['input_text'].astype('category').cat.codes
+data['feature1'] = data['feature1'].map({'A': 0, 'B': 1})
+data['mood'] = data['mood'].astype('category').cat.codes
+
+#calculate AVC set, incrementing count for each pair in the set
+def compute_avc(data, target_col):
+    avc = defaultdict(lambda: defaultdict(int))
+    for _, row in data.iterrows():
+        for col in data.columns:
+            if col != target_col:
+                avc[col][(row[col], row[target_col])] += 1
+    return avc
+
+#find the best split to determine the best attribute to split on based on AVC and returns attribute wiith highest total count
+def best_split(avc):
+    best_attr = None
+    max_count = -1
+    for attr, values in avc.items():
+        total_count = sum(values.values())
+        if total_count > max_count:
+            max_count = total_count
+            best_attr = attr
+    return best_attr
+
+#build a decision tree using AVC sets
+def build_tree(data, target_col='mood'):
+    avc = compute_avc(data, target_col)
+    split_attr = best_split(avc)
+    tree = {split_attr: {}}
+    for value, target_counts in avc[split_attr].items():
+        feature_value, target_value = value
+        if target_value not in tree[split_attr]:
+            tree[split_attr][target_value] = []
+        tree[split_attr][target_value].append((feature_value, target_counts))
+    return tree
+
+#print the decision tree
+tree = build_tree(data)
+print("Decision Tree:", tree)
+
+#splitting data into sets where 20% is used for testing 
+X = data[['input_text', 'feature1', 'feature2']]
+y = data['mood']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+#random Forest Model
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
+
+#predictions
+y_pred = rf_model.predict(X_test)
+
+#evaluates and prints accuracy of model
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Accuracy: {accuracy:.2f}')
