@@ -1,0 +1,77 @@
+#importing libraries like nltk and numpy and 
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Embedding, GlobalAveragePooling1D
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+import numpy as np
+
+#checking if NLTK data is downloaded
+nltk.download('vader_lexicon')
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+#sample data used for training
+train_sentences = ["I am happy", "I am sad", "I am excited", "I am worried"]
+train_labels = [1, 0, 1, 0]  #1 for positive mood and 0 for negative mood
+
+#tokenization, intialising lemmatiser, and removing stop words
+lemmatizer = WordNetLemmatizer()
+stop_words = set(stopwords.words('english'))
+
+def preprocess_sentence(sentence):
+    tokens = word_tokenize(sentence)
+    tokens = [lemmatizer.lemmatize(word.lower()) for word in tokens if word.isalpha() and word.lower() not in stop_words]
+    return ' '.join(tokens)
+
+train_sentences = [preprocess_sentence(sentence) for sentence in train_sentences]
+
+#configuration - embedding vectors, training and padding sequences, tokenising
+vocab_size = 100
+embedding_dim = 16
+max_length = 10
+oov_token = "<OOV>"
+
+tokenizer = Tokenizer(num_words=vocab_size, oov_token=oov_token)
+tokenizer.fit_on_texts(train_sentences)
+train_sequences = tokenizer.texts_to_sequences(train_sentences)
+train_padded = pad_sequences(train_sequences, maxlen=max_length, padding = 'post', truncating = 'post')
+
+#neural network model - compiling and summarising model
+model = Sequential([
+    Embedding(vocab_size, embedding_dim, input_length=max_length),
+    GlobalAveragePooling1D(),
+    Dense(6, activation='relu'),
+    Dense(1, activation='sigmoid')
+])
+
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.summary()
+
+#training the model by converting data to numpy arrays
+train_padded = np.array(train_padded)
+train_labels = np.array(train_labels)
+
+model.fit(train_padded, train_labels, epochs=30, verbose=2)
+
+#analysing mood by preprocessing user input
+def analyze_mood_nn(user_input):
+    """Analyze the mood using the neural network model."""
+    processed_input = preprocess_sentence(user_input)
+    sequence = tokenizer.texts_to_sequences([processed_input])
+    padded_sequence = pad_sequences(sequence, maxlen = max_length, padding = 'post', truncating = 'post')
+    prediction = model.predict(padded_sequence)[0][0]
+    return 'Positive' if prediction > 0.5 else 'Negative'
+
+def main():
+    print("Welcome to Alvie Mood Predictor!")
+    user_input = input("How are you feeling today? ")
+    mood = analyze_mood_nn(user_input)
+    print(f"Your current mood is: {mood}")
+
+if __name__ == "__main__":
+    main()
