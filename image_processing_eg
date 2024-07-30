@@ -1,0 +1,52 @@
+#importing libraries cv2, numpy, loading pretrained models and preprocessing images
+import cv2
+import numpy as np
+from tensorflow.keras.models import load_model
+
+#loading pre-trained emotion detection model
+model = load_model('emotion_model.h5')
+
+#emotion label possibilties
+emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+
+#initializing face detector
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+#starting video capture
+cap = cv2.VideoCapture(0)
+
+while True:
+#capturing image frame-by-frame in smaller segments
+    ret, frame = cap.read()
+
+#converting to grayscale
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+#detecting faces in images
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+
+    for (x, y, w, h) in faces:
+#extract facial/emotional  information from face region
+        face = gray[y:y+h, x:x+w]
+        face = cv2.resize(face, (48, 48))
+        face = face / 255.0
+        face = face.reshape(1, 48, 48, 1)
+
+#predict user emotion based on information
+        prediction = model.predict(face)
+        emotion = emotions[np.argmax(prediction)]
+
+#draw rectangle and label the face
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+        cv2.putText(frame, emotion, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
+
+#displaying frame showing face
+    cv2.imshow('Emotion Detector', frame)
+
+#break/exit loop when 'q' key is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+#release the capture and close windows
+cap.release()
+cv2.destroyAllWindows()
