@@ -1,0 +1,29 @@
+#importing libraries for GMM 
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.mixture import GaussianMixture
+
+#user text entry data
+text_entries = [
+    "I feel very excited about today",
+    "I'm really sad and I can't get out of bed",
+    "I'm very anxious about leaving Berlin",
+    "I'm feeling joyful and content with my life right now",
+    "I am quite upset and disappointed with myself and the world"
+]
+
+#converting text to numerics using TF-IDF
+vectorizer = TfidfVectorizer(max_features=10)
+X = vectorizer.fit_transform(text_entries).toarray()
+
+#applying GMM
+gmm = GaussianMixture(n_components=3, random_state=42)
+gmm.fit(X)
+predicted_emotions = gmm.predict(X)
+
+#map the cluster labels to emotion states
+emotion_states = {0: "Positive", 1: "Negative", 2: "Anxious"}
+for i, prediction in enumerate(predicted_emotions):
+#printing results
+    print(f"Entry {i}: '{text_entries[i]}' - Predicted Emotion: {emotion_states[prediction]}")
+
