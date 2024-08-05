@@ -1,0 +1,41 @@
+#import librraies and toolkits needed like spacy and vectorizer and to cluster emotional states
+import spacy
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+
+#loading spacy English model
+nlp = spacy.load('en_core_web_sm')
+
+#exampletext entries by users
+user_texts = [
+    "I feel really very anxious and overwhelmed today with my homework.",
+    "I'm just exhausted and lazy",
+    "I'm having an extremely good day, and I'm just feeling so happy and light-hearted!",
+    "I'm so sad and lonely.",
+    "I'm frightened and terrified of the next few days."
+]
+
+#preprocess and parse text using spacy
+def preprocess_texts(texts):
+    processed_texts = []
+    for text in texts:
+        doc = nlp(text.lower())
+        tokens = [token.lemma_ for token in doc if not token.is_stop and not token.is_punct]
+        processed_texts.append(" ".join(tokens))
+    return processed_texts
+
+#preprocess user text entries
+processed_texts = preprocess_texts(user_texts)
+
+#cnverting text -> numerical features using TF-IDF vectoriszation
+vectorizer = TfidfVectorizer()
+X = vectorizer.fit_transform(processed_texts)
+
+#K-Means clustering for grouping user emoitonal states
+kmeans = KMeans(n_clusters=2, random_state=42)
+kmeans.fit(X)
+
+#print clusters
+for i, text in enumerate(user_texts):
+    print(f"Text: '{text}' -> Cluster: {kmeans.labels_[i]}")
+
