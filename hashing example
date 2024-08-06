@@ -1,0 +1,46 @@
+#import libraries for hashing and parsing, plus clustering
+import hashlib
+import spacy
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+
+#applying English NLP model
+nlp = spacy.load("en_core_web_sm")
+
+#parsing and process text using the parst_tetx fn
+def parse_text(entry):
+    doc = nlp(entry)
+    return " ".join([token.lemma_ for token in doc if not token.is_stop])
+
+#hashing function for user's text entry
+def hash_user_entry(entry):
+    entry_bytes = entry.encode()
+    hash_object = hashlib.sha256(entry_bytes)
+    hex_dig = hash_object.hexdigest()
+    return hex_dig
+
+#text entries from users about their emotional/mental state
+user_entries = [
+    "I feel very excited and grateful to live life today and explore the city!!",
+    "I'm very stressed about work and don't know how to push through.",
+]
+
+#parsing and then hashing above entries using common functions
+parsed_entries = [parse_text(entry) for entry in user_entries]
+hashed_entries = [hash_user_entry(entry) for entry in parsed_entries]
+
+#vectorising parsed entries
+vectorizer = TfidfVectorizer()
+X = vectorizer.fit_transform(parsed_entries)
+
+#and then applying KMeans clustering functions which helps create clusters or groups for emtional states
+kmeans = KMeans(n_clusters=2, random_state=0)
+kmeans.fit(X)
+clusters = kmeans.predict(X)
+
+#printing the output for the parsed and hashed results
+for i, entry in enumerate(user_entries):
+    print(f"Original Entry: {entry}")
+    print(f"Parsed Entry: {parsed_entries[i]}")
+    print(f"Hashed Entry: {hashed_entries[i]}")
+    print(f"Cluster: {clusters[i]}\n")
