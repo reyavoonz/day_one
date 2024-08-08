@@ -1,0 +1,53 @@
+#importing required libs for clustering and indexing
+import os
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+
+#user text entries that are user inputs reflective of their emotional state
+entries = [
+    "I'm anxious and really stressed today and I'm not even sure why.",
+    "I'm satisfied with my progress and feel very light-hearted.",
+    "I have been feeling really down lately and everything seems to be falling apart.",
+    "Today was such a bopping day, I felt super productive.",
+]
+
+#indexing user entries using TF-IDF algroithm
+vectorizer = TfidfVectorizer(stop_words='english')
+X = vectorizer.fit_transform(entries)
+
+#clustering or grouping emotional states (3) and categorise states numerically, using K-Means algorithm
+n_clusters = 3
+kmeans = KMeans(n_clusters=n_clusters, random_state=0)
+kmeans.fit(X)
+
+#printing cluster each user entry could potentially belong to based on key words
+for i, entry in enumerate(entries):
+    print(f"Entry: {entry}\nCluster: {kmeans.labels_[i]}\n")
+
+#printing indexed terms
+print("Indexed terms:")
+print(vectorizer.get_feature_names_out())
+
+#saving clustered entries by indexing them by cluster number from 0-3
+indexed_entries = {}
+for i in range(n_clusters):
+    indexed_entries[i] = []
+    
+#populating w entries in their respetcive clusters
+for i, entry in enumerate(entries):
+    indexed_entries[kmeans.labels_[i]].append(entry)
+
+print("\nClustered and indexed entries:")
+for cluster, texts in indexed_entries.items():
+    print(f"\nCluster {cluster}:")
+    for text in texts:
+        print(f"- {text}")
+
+#simulating a database, creates it and then writes the corresponding entries into the text files
+if not os.path.exists("indexed_entries"):
+    os.makedirs("indexed_entries")
+
+for cluster, texts in indexed_entries.items():
+    with open(f"indexed_entries/cluster_{cluster}.txt", "w") as f:
+        for text in texts:
+            f.write(f"{text}\n")
